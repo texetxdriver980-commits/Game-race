@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Drift Game: Full Version</title>
+    <style>
+        body { margin: 0; background: #222; overflow: hidden; }
+        canvas { display: block; touch-action: none; image-rendering: pixelated; }
+    </style>
+</head>
+<body>
+    <canvas id="game"></canvas>
+    <script>
+        const canvas = document.getElementById('game');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const playerImg = new Image(); playerImg.src = 'https://i.ibb.co/N67ThFfd/hyndai.png';
+        const enemyImg = new Image(); enemyImg.src = 'https://i.ibb.co/JFdBN40d/sedan.png';
+        const roadTexture = new Image(); roadTexture.src = 'https://i.ibb.co/MxV2VPt4/Screenshot-2026-05-29-014902.png';
+        const bgImg = new Image(); bgImg.src = 'https://i.ibb.co/RTMQ6kMv/IMG-20260529-024322.png';
+        
+        // Музыка
+        const music = new Audio('https://github.com/texetxdriver980-commits/Muzik/raw/refs/heads/main/hard_pivot.mp3');
+        music.loop = true;
+
+        let driftX = 0, targetDrift = 0, carAngle = 0, roadOffset = 0, gameOver = false, started = false;
+        let isTouching = false, touchDirection = 0;
+        let enemies = [], driftMarks = [];
+
+        window.addEventListener('touchstart', (e) => {
+            if (gameOver) { location.reload(); return; }
+            if (!started) { music.play(); started = true; }
+            isTouching = true;
+            touchDirection = (e.touches[0].clientX < canvas.width / 2) ? -1 : 1;
+        });
+        window.addEventListener('touchend', () => { isTouching = false; });
+
+        function update() {
+            if (gameOver) return;
+
+            let roadCurve = Math.max(-canvas.width * 0.5, Math.min(canvas.width * 0.5, Math.sin(Date.now() / 2000) * 500));
+            roadOffset += 2; 
+
+            if (isTouching) {
+                targetDrift += touchDirection * 6;
+                carAngle = Math.max(-0.6, Math.min(0.6, carAngle + touchDirection * 0.08));
+                if (Math.abs(carAngle) > 0.2) driftMarks.push({ x: (canvas.width / 2 + driftX), angle: carAngle, z: 0 });
+            } else {
+                targetDrift = 0; carAngle *= 0.9;
+            }
+            driftX = Math.max(-150, Math.min(150, driftX + (targetDrift - driftX) * 0.02));
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const horizonY = canvas.height / 3;
+            ctx.drawImage(bgImg, -canvas.width/2 - (roadCurve * 0.1), 0, canvas.width * 2, horizonY);
+
+            const segmentCount = 100;
+            for (let i = 0; i < segmentCount; i++) {
+                let z = i / segmentCount;
+                let y = horizonY + (z * (canvas.height - horizonY));
+                let nextY = horizonY + ((i + 1) / segmentCount * (canvas.height - horizonY));
+                let roadWidth = (canvas.width * 0.4) + (z * canvas.width * 1.8);
+                let roadCurveOffset = roadCurve * (z * z);
+
+                let srcY = (i * 3 - roadOffset) % roadTexture.height;
+                if (srcY < 0) srcY += roadTexture.height;
+
+                ctx.drawImage(roadTexture, 0, srcY, roadTexture.width, 3, 
+                              canvas.width/2 - roadWidth/2 + roadCurveOffset, y, 
+                              roadWidth, nextY - y + 1);
+            }
+
+            driftMarks.forEach((m, index) => {
+                m.z += 0.02;
+                if (m.z >= 1) { driftMarks.splice(index, 1); return; }
+                let y = (canvas.height * 0.85) + (m.z * (canvas.height * 0.15));
+                let baseCurve = roadCurve * m.z * m.z;
+                let cos = Math.cos(m.angle);
+                let sin = Math.sin(m.angle);
+                [-35, 35].forEach(offset => {
+                    ctx.fillStyle = `rgba(0, 0, 0, ${1 - m.z})`;
+                    ctx.beginPath();
+                    ctx.arc(m.x + baseCurve + offset * cos - 10 * sin, y + offset * sin + 10 * cos, 2.5 * (1 - m.z), 0, Math.PI * 2);
+                    ctx.fill();
+                });
+            });
+
+            if (Math.random() < 0.01 && (enemies.length === 0 || enemies[enemies.length - 1].z > 0.4)) enemies.push({ x: Math.random(), z: 0 });
+            enemies.forEach((en, index) => {
+                en.z += 0.005;
+                if (en.z >= 1) { enemies.splice(index, 1); return; }
+                let y = horizonY + (en.z * (canvas.height - horizonY));
+                let x = (canvas.width / 2 + roadCurve * (en.z * en.z)) + ((canvas.width * 0.4) + (en.z * canvas.width * 1.8)) * (en.x - 0.5);
+                if (en.z > 0.75 && en.z < 0.95 && Math.abs((canvas.width/2 + driftX) - x) < 70) {
+                    gameOver = true;
+                    music.pause();
+                }
+                ctx.drawImage(enemyImg, x - 75 * (0.2 + en.z), y - 75 * (0.2 + en.z), 150 * (0.2 + en.z), 150 * (0.2 + en.z));
+            });
+
+            ctx.save();
+            ctx.translate(canvas.width / 2 + driftX, canvas.height * 0.8);
+            ctx.rotate(carAngle);
+            ctx.drawImage(playerImg, -50, -50, 100, 100);
+            ctx.restore();
+
+            if (gameOver) {
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 50px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('CRASHED!', canvas.width/2, canvas.height/2);
+            }
+            requestAnimationFrame(update);
+        }
+        
+        let loaded = 0;
+        const checkLoad = () => { if (++loaded === 4) update(); };
+        playerImg.onload = checkLoad; enemyImg.onload = checkLoad; roadTexture.onload = checkLoad; bgImg.onload = checkLoad;
+    </script>
+</body>
+</html>

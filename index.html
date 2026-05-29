@@ -1,8 +1,8 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Drift Game: Full Version</title>
+    <title>Drift Game: Scaled</title>
     <style>
         body { margin: 0; background: #222; overflow: hidden; }
         canvas { display: block; touch-action: none; image-rendering: pixelated; }
@@ -21,7 +21,6 @@
         const roadTexture = new Image(); roadTexture.src = 'https://i.ibb.co/MxV2VPt4/Screenshot-2026-05-29-014902.png';
         const bgImg = new Image(); bgImg.src = 'https://i.ibb.co/RTMQ6kMv/IMG-20260529-024322.png';
         
-        // Музыка
         const music = new Audio('https://github.com/texetxdriver980-commits/Muzik/raw/refs/heads/main/hard_pivot.mp3');
         music.loop = true;
 
@@ -39,7 +38,6 @@
 
         function update() {
             if (gameOver) return;
-
             let roadCurve = Math.max(-canvas.width * 0.5, Math.min(canvas.width * 0.5, Math.sin(Date.now() / 2000) * 500));
             roadOffset += 2; 
 
@@ -53,7 +51,6 @@
             driftX = Math.max(-150, Math.min(150, driftX + (targetDrift - driftX) * 0.02));
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
             const horizonY = canvas.height / 3;
             ctx.drawImage(bgImg, -canvas.width/2 - (roadCurve * 0.1), 0, canvas.width * 2, horizonY);
 
@@ -64,13 +61,9 @@
                 let nextY = horizonY + ((i + 1) / segmentCount * (canvas.height - horizonY));
                 let roadWidth = (canvas.width * 0.4) + (z * canvas.width * 1.8);
                 let roadCurveOffset = roadCurve * (z * z);
-
                 let srcY = (i * 3 - roadOffset) % roadTexture.height;
                 if (srcY < 0) srcY += roadTexture.height;
-
-                ctx.drawImage(roadTexture, 0, srcY, roadTexture.width, 3, 
-                              canvas.width/2 - roadWidth/2 + roadCurveOffset, y, 
-                              roadWidth, nextY - y + 1);
+                ctx.drawImage(roadTexture, 0, srcY, roadTexture.width, 3, canvas.width/2 - roadWidth/2 + roadCurveOffset, y, roadWidth, nextY - y + 1);
             }
 
             driftMarks.forEach((m, index) => {
@@ -78,12 +71,11 @@
                 if (m.z >= 1) { driftMarks.splice(index, 1); return; }
                 let y = (canvas.height * 0.85) + (m.z * (canvas.height * 0.15));
                 let baseCurve = roadCurve * m.z * m.z;
-                let cos = Math.cos(m.angle);
-                let sin = Math.sin(m.angle);
+                let cos = Math.cos(m.angle); let sin = Math.sin(m.angle);
                 [-35, 35].forEach(offset => {
                     ctx.fillStyle = `rgba(0, 0, 0, ${1 - m.z})`;
                     ctx.beginPath();
-                    ctx.arc(m.x + baseCurve + offset * cos - 10 * sin, y + offset * sin + 10 * cos, 2.5 * (1 - m.z), 0, Math.PI * 2);
+                    ctx.arc(m.x + baseCurve + offset * cos - 10 * sin, y + offset * sin + 10 * cos, 4 * (1 - m.z), 0, Math.PI * 2);
                     ctx.fill();
                 });
             });
@@ -98,13 +90,17 @@
                     gameOver = true;
                     music.pause();
                 }
-                ctx.drawImage(enemyImg, x - 75 * (0.2 + en.z), y - 75 * (0.2 + en.z), 150 * (0.2 + en.z), 150 * (0.2 + en.z));
+                // Масштабируем врагов
+                let size = 300 * (0.2 + en.z);
+                ctx.drawImage(enemyImg, x - size/2, y - size/2, size, size);
             });
 
             ctx.save();
             ctx.translate(canvas.width / 2 + driftX, canvas.height * 0.8);
             ctx.rotate(carAngle);
-            ctx.drawImage(playerImg, -50, -50, 100, 100);
+            // Масштабируем игрока
+            let playerSize = 200; 
+            ctx.drawImage(playerImg, -playerSize/2, -playerSize/2, playerSize, playerSize);
             ctx.restore();
 
             if (gameOver) {

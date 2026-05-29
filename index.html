@@ -1,8 +1,8 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Drift Game: Scaled</title>
+    <title>Drift Game: Final Scale</title>
     <style>
         body { margin: 0; background: #222; overflow: hidden; }
         canvas { display: block; touch-action: none; image-rendering: pixelated; }
@@ -42,13 +42,13 @@
             roadOffset += 2; 
 
             if (isTouching) {
-                targetDrift += touchDirection * 6;
+                targetDrift += touchDirection * 8;
                 carAngle = Math.max(-0.6, Math.min(0.6, carAngle + touchDirection * 0.08));
                 if (Math.abs(carAngle) > 0.2) driftMarks.push({ x: (canvas.width / 2 + driftX), angle: carAngle, z: 0 });
             } else {
                 targetDrift = 0; carAngle *= 0.9;
             }
-            driftX = Math.max(-150, Math.min(150, driftX + (targetDrift - driftX) * 0.02));
+            driftX = Math.max(-400, Math.min(400, driftX + (targetDrift - driftX) * 0.02));
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             const horizonY = canvas.height / 3;
@@ -86,21 +86,18 @@
                 if (en.z >= 1) { enemies.splice(index, 1); return; }
                 let y = horizonY + (en.z * (canvas.height - horizonY));
                 let x = (canvas.width / 2 + roadCurve * (en.z * en.z)) + ((canvas.width * 0.4) + (en.z * canvas.width * 1.8)) * (en.x - 0.5);
-                if (en.z > 0.75 && en.z < 0.95 && Math.abs((canvas.width/2 + driftX) - x) < 70) {
+                if (en.z > 0.75 && en.z < 0.95 && Math.abs((canvas.width/2 + driftX) - x) < 150) {
                     gameOver = true;
                     music.pause();
                 }
-                // Масштабируем врагов
-                let size = 300 * (0.2 + en.z);
+                let size = 400 * (0.5 + en.z); 
                 ctx.drawImage(enemyImg, x - size/2, y - size/2, size, size);
             });
 
             ctx.save();
-            ctx.translate(canvas.width / 2 + driftX, canvas.height * 0.8);
+            ctx.translate(canvas.width / 2 + driftX, canvas.height * 0.85);
             ctx.rotate(carAngle);
-            // Масштабируем игрока
-            let playerSize = 200; 
-            ctx.drawImage(playerImg, -playerSize/2, -playerSize/2, playerSize, playerSize);
+            ctx.drawImage(playerImg, -200, -200, 400, 400);
             ctx.restore();
 
             if (gameOver) {
